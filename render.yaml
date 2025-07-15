@@ -1,9 +1,9 @@
 services:
-  - type: web
-    name: telegram-expense-webhook
-    env: python
+  - type: worker
+    name: telegram-expense-bot
+    runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
     envVars:
       - key: TELEGRAM_TOKEN
-        value: your_bot_token_here
+        value: your_token_here
