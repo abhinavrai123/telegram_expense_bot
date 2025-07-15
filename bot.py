@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, date
 from flask import Flask, request
 
-bot = telebot.TeleBot("7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA")
+bot = telebot.TeleBot("")
 app = Flask(__name__)
 
 DATA_DIR = "data"
