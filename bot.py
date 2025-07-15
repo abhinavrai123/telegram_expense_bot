@@ -4,8 +4,7 @@ import pandas as pd
 from datetime import datetime, date
 from flask import Flask, request
 
-TOKEN = os.environ.get("7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA")
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot("7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA")
 app = Flask(__name__)
 
 DATA_DIR = "data"
@@ -82,7 +81,7 @@ def handle_steps(message):
         bot.send_message(message.chat.id, "Entry saved.")
         context.pop(message.chat.id)
 
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route(f"/{"7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA"}", methods=["POST"])
 def webhook():
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return "ok"
