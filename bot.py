@@ -81,7 +81,7 @@ def handle_steps(message):
         bot.send_message(message.chat.id, "Entry saved.")
         context.pop(message.chat.id)
 
-@app.route(f"/{"7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA"}", methods=["POST"])
+@app.route(f"/{""}", methods=["POST"])
 def webhook():
     bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
     return "ok"
