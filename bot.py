@@ -33,8 +33,7 @@ def format_today_summary(user_id):
     if df.empty:
         return "No records for today."
 
-    msg = "*Today's Summary:*
-"
+    msg = "*Today's Summary:*"
     total = 0
     for _, row in df.iterrows():
         dt = datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S")
