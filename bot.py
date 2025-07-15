@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, date
 from flask import Flask, request
 
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TOKEN = os.environ.get("7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
