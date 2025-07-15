@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: telegram-expense-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        value: your_token_here
