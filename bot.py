@@ -3,7 +3,6 @@ import telegram
 import os
 import pandas as pd
 from datetime import datetime, date
-from apscheduler.schedulers.background import BackgroundScheduler
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 bot = telegram.Bot(token=TOKEN)
@@ -34,7 +33,8 @@ def format_today_summary(user_id):
     if df.empty:
         return "📭 No records for today."
 
-    msg = "*📊 Today's Summary:*\n"
+    msg = "*📊 Today's Summary:*
+"
     total = 0
     for _, row in df.iterrows():
         dt = datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S")
@@ -55,16 +55,16 @@ def webhook():
     chat_id = update.message.chat.id
     text = update.message.text.strip()
 
+    if text.lower() == "/today":
+        msg = format_today_summary(chat_id)
+        bot.send_message(chat_id=chat_id, text=msg, parse_mode="Markdown")
+        return "ok"
+
     if text.startswith("+") or text.replace(".", "").isdigit():
         amount = float(text.lstrip("+"))
         entry_type = "income" if text.startswith("+") else "expense"
         bot.send_message(chat_id=chat_id, text="Mode? (Cash/Online)")
         context[chat_id] = {"amount": amount, "type": entry_type, "step": "mode"}
-        return "ok"
-
-    if text.lower() == "/today":
-        msg = format_today_summary(chat_id)
-        bot.send_message(chat_id=chat_id, text=msg, parse_mode="Markdown")
         return "ok"
 
     if chat_id in context:
@@ -84,7 +84,7 @@ def webhook():
             context.pop(chat_id)
         return "ok"
 
-    bot.send_message(chat_id=chat_id, text="Welcome! Send an amount to begin.")
+    bot.send_message(chat_id=chat_id, text="Send an amount (e.g. 250 or +1000) to begin.")
     return "ok"
 
 context = {}
@@ -92,6 +92,3 @@ context = {}
 @app.route("/", methods=["GET"])
 def index():
     return "Bot is running."
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
