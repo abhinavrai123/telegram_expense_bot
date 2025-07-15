@@ -28,12 +28,12 @@ def save_entry(user_id, amount, mode, category, note, entry_type):
 def format_today_summary(user_id):
     file_path = os.path.join(DATA_DIR, f"{user_id}_{date.today()}.csv")
     if not os.path.exists(file_path):
-        return "📭 No records for today."
+        return "No records for today."
     df = pd.read_csv(file_path)
     if df.empty:
-        return "📭 No records for today."
+        return "No records for today."
 
-    msg = "*📊 Today's Summary:*
+    msg = "*Today's Summary:*
 "
     total = 0
     for _, row in df.iterrows():
@@ -42,11 +42,11 @@ def format_today_summary(user_id):
         amt = row["amount"]
         sign = "+" if row.get("type") == "income" else "-"
         total += amt if sign == "+" else -amt
-        icon = "💰" if sign == "+" else "💸"
+        icon = "" if sign == "+" else ""
         msg += f"{icon} {t} | {sign}₹{amt:.2f} | {row['mode']} | {row['category']} | {row['note']}
 "
     msg += f"
-💰 Net Total: {'+' if total >=0 else '-'}₹{abs(total):.2f}"
+ Net Total: {'+' if total >=0 else '-'}₹{abs(total):.2f}"
     return msg
 
 @app.route(f"/{TOKEN}", methods=["POST"])
@@ -80,7 +80,7 @@ def webhook():
         elif state["step"] == "note":
             state["note"] = text
             save_entry(chat_id, state["amount"], state["mode"], state["category"], state["note"], state["type"])
-            bot.send_message(chat_id=chat_id, text="✅ Entry saved.")
+            bot.send_message(chat_id=chat_id, text=" Entry saved.")
             context.pop(chat_id)
         return "ok"
 
