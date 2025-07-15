@@ -48,6 +48,11 @@ def format_today_summary(user_id):
     msg += f"\nNet Total: {'+' if total >=0 else '-'}₹{abs(total):.2f}"
     return msg
 
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.send_message(message.chat.id, "Welcome to Expense Tracker Bot!\nEnter an amount to begin. Use + for income, e.g., +500")
+
 @bot.message_handler(commands=['today'])
 def send_summary(message):
     summary = format_today_summary(message.chat.id)
