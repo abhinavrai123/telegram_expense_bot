@@ -42,10 +42,8 @@ def format_today_summary(user_id):
         sign = "+" if row.get("type") == "income" else "-"
         total += amt if sign == "+" else -amt
         icon = "" if sign == "+" else ""
-        msg += f"{icon} {t} | {sign}₹{amt:.2f} | {row['mode']} | {row['category']} | {row['note']}
-"
-    msg += f"
- Net Total: {'+' if total >=0 else '-'}₹{abs(total):.2f}"
+        msg += f"{icon} {t} | {sign}₹{amt:.2f} | {row['mode']} | {row['category']} | {row['note']}"
+    msg += f"Net Total: {'+' if total >=0 else '-'}₹{abs(total):.2f}"
     return msg
 
 @app.route(f"/{TOKEN}", methods=["POST"])
