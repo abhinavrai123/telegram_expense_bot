@@ -1,6 +1,8 @@
+
 import asyncio
 import signal
 import os
+import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
@@ -14,29 +16,23 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ENTER_NOTE = 1
 
 def format_entry(index, e):
-    amount = f'{e["amount"]:.2f}'
+    amount = f'{e["amount"]}'
     note = f'| {e["note"]}' if e.get("note") else ""
     return f'{index:<2}. {e["timestamp"]} | {e["account"]:<1} | {amount:<8} | {e["mode"]:<6} {note:<25}'
+
+float_regex = re.compile(r'^[+-]?\d+(\.\d+)?$')
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     chat_id = update.effective_chat.id
 
-    if not text:
+    if not text or not float_regex.match(text):
+        await update.message.reply_text("Invalid amount format. Please enter a number like `+100`, `-100`, or `100`. No letters or symbols.", parse_mode="Markdown")
         return
 
     entry = {"chat_id": chat_id, "raw": text}
-
-    try:
-        if text.startswith('+'):
-            entry["type"] = "income"
-            entry["amount"] = float(text[1:])
-        else:
-            entry["type"] = "expense"
-            entry["amount"] = float(text)
-    except ValueError:
-        await update.message.reply_text("Invalid amount format.")
-        return
+    entry["type"] = "income" if text.startswith('+') else "expense"
+    entry["amount"] = float(text.lstrip('+'))
 
     context.user_data["pending_entry"] = entry
 
@@ -65,7 +61,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("acct:"):
         entry["account"] = data.split(":", 1)[1]
         now = datetime.now()
-        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")  # Day + Date
+        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")
         await query.edit_message_text("Enter a short note for this entry (or type '-' to skip):")
         return ENTER_NOTE
 
