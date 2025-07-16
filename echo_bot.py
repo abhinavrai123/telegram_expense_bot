@@ -28,21 +28,14 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     entry = {"chat_id": chat_id, "raw": text}
 
     try:
-        cleaned = text.replace('₹', '').replace('rs', '').replace('RS', '').replace(' ', '')
-        if cleaned.startswith('+'):
+        if text.startswith('+'):
             entry["type"] = "income"
-            entry["amount"] = float(cleaned[1:])
-        elif cleaned.startswith('-'):
-            entry["type"] = "expense"
-            entry["amount"] = float(cleaned[1:])
+            entry["amount"] = float(text[1:])
         else:
             entry["type"] = "expense"
-            entry["amount"] = float(cleaned)
+            entry["amount"] = float(text)
     except ValueError:
-        await update.message.reply_text("Invalid amount. Try:
-200 → expense
-+500 → income
-₹300 → expense")
+        await update.message.reply_text("Invalid amount format.")
         return
 
     context.user_data["pending_entry"] = entry
