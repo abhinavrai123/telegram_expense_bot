@@ -1,9 +1,10 @@
 services:
-  - type: worker
-    name: expense-tracker-bot
+  - type: web
+    name: telegram-expense-bot
     env: python
     plan: free
-    startCommand: python bot.py
+    buildCommand: ""
+    startCommand: python echo_bot.py
     envVars:
       - key: BOT_TOKEN
         sync: false
