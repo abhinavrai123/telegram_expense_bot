@@ -14,12 +14,12 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ENTER_NOTE = 1
 
 def format_entry(index, e):
-    amount = f'{e["amount"]:.2f}'
+    amount = f'{e["amount"]}₹'
     note = f'| {e["note"]}' if e.get("note") else ""
     return f'{index:<2}. {e["timestamp"]} | {e["account"]:<1} | {amount:<8} | {e["mode"]:<6} {note:<25}'
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
+    text = update.message.text.strip().replace(",", "")
     chat_id = update.effective_chat.id
 
     if not text:
@@ -27,6 +27,13 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         amount = float(text)
+        if amount < 0:
+            await update.message.reply_text("Please enter a positive amount.")
+            return
+        if not amount.is_integer():
+            await update.message.reply_text("Please enter a whole number (no paise).")
+            return
+        amount = int(amount)
     except ValueError:
         await update.message.reply_text("Invalid amount format.")
         return
@@ -69,7 +76,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("acct:"):
         entry["account"] = data.split(":", 1)[1]
         now = datetime.now()
-        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")  # Day + Date
+        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")
         await query.edit_message_text("Enter a short note for this entry (or type '-' to skip):")
         return ENTER_NOTE
 
@@ -85,8 +92,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines = [format_entry(i + 1, e) for i, e in enumerate(filtered)]
         total_income = sum(e["amount"] for e in filtered if e["type"] == "income")
         total_expense = sum(e["amount"] for e in filtered if e["type"] == "expense")
-        lines.append(f'\nTotal Income: {total_income:.2f}')
-        lines.append(f'Total Expense: {total_expense:.2f}')
+        lines.append(f'\nTotal Income: {total_income}₹')
+        lines.append(f'Total Expense: {total_expense}₹')
         await query.edit_message_text("\n".join(lines))
 
 async def handle_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -114,8 +121,8 @@ async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [format_entry(i + 1, e) for i, e in enumerate(today_entries)]
     total_income = sum(e["amount"] for e in today_entries if e["type"] == "income")
     total_expense = sum(e["amount"] for e in today_entries if e["type"] == "expense")
-    lines.append(f'\nTotal Income: {total_income:.2f}')
-    lines.append(f'Total Expense: {total_expense:.2f}')
+    lines.append(f'\nTotal Income: {total_income}₹')
+    lines.append(f'Total Expense: {total_expense}₹')
     await update.message.reply_text("\n".join(lines))
 
 async def export_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,9 +132,18 @@ async def export_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["type", "amount", "mode", "account", "timestamp", "note"])
+    writer = csv.DictWriter(output, fieldnames=["type", "amount_rupees", "mode", "account", "timestamp", "note"])
     writer.writeheader()
-    writer.writerows(entries)
+    for e in entries:
+        writer.writerow({
+            "type": e["type"],
+            "amount_rupees": e["amount"],
+            "mode": e["mode"],
+            "account": e["account"],
+            "timestamp": e["timestamp"],
+            "note": e.get("note", ""),
+        })
+
     output.seek(0)
     await update.message.reply_document(document=io.BytesIO(output.read().encode()), filename="expenses.csv")
 
