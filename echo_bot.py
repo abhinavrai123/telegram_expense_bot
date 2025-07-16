@@ -39,7 +39,7 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
             entry["type"] = "expense"
             entry["amount"] = float(cleaned)
     except ValueError:
-        await update.message.reply_text("❗ Invalid amount. Try:
+        await update.message.reply_text("Invalid amount. Try:
 200 → expense
 +500 → income
 ₹300 → expense")
