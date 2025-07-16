@@ -1,5 +1,4 @@
 import asyncio
-import signal
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -168,9 +167,7 @@ async def run_bot():
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
-        states={
-            ENTER_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note)]
-        },
+        states={ENTER_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note)]},
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
@@ -182,28 +179,8 @@ async def run_bot():
     app.add_handler(CommandHandler("delete", delete))
     app.add_handler(CommandHandler("filter", filter_command))
 
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-
     print("Bot is running. Press Ctrl+C to stop.")
-
-    stop_event = asyncio.Event()
-
-    def handle_shutdown():
-        stop_event.set()
-
-    loop = asyncio.get_running_loop()
-    for sig in ('SIGINT', 'SIGTERM'):
-        loop.add_signal_handler(getattr(signal, sig), handle_shutdown)
-
-    try:
-        await stop_event.wait()
-    finally:
-        print("Shutting down...")
-        await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
+    await app.run_polling()
 
 if __name__ == "__main__":
     try:
