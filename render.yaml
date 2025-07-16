@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: telegram-echo-bot
+    name: telegram-expense-bot
     env: python
     plan: free
     buildCommand: ""
