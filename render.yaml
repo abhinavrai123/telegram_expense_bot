@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: telegram-echo-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python echo_bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false

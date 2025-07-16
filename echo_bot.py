@@ -1,4 +1,5 @@
 import asyncio
+import signal
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -7,8 +8,9 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+import os
 
-BOT_TOKEN = "7837128791:AAEH5JYPFuF3oqbDwA2Og7SGZDpSS0sgGOA"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")  # Read from environment variable
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I will echo whatever you send.")
@@ -22,17 +24,15 @@ async def run_bot():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-    # Initialize and start the bot
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
 
     print("Bot is running. Press Ctrl+C to stop.")
 
-    # Wait until interrupted
     stop_event = asyncio.Event()
 
-    def handle_shutdown(*_):
+    def handle_shutdown():
         stop_event.set()
 
     loop = asyncio.get_running_loop()
@@ -47,10 +47,7 @@ async def run_bot():
         await app.stop()
         await app.shutdown()
 
-# Entry point
 if __name__ == "__main__":
-    import signal
-
     try:
         asyncio.run(run_bot())
     except (KeyboardInterrupt, SystemExit):
