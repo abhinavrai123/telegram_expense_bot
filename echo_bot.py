@@ -1,4 +1,5 @@
 import asyncio
+import signal
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -13,53 +14,43 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ENTER_NOTE = 1
 
 def format_entry(index, e):
-    amount = f'{e["amount"]}₹'
+    amount = f'{e["amount"]:.2f}'
     note = f'| {e["note"]}' if e.get("note") else ""
     return f'{index:<2}. {e["timestamp"]} | {e["account"]:<1} | {amount:<8} | {e["mode"]:<6} {note:<25}'
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip().replace(",", "")
+    text = update.message.text.strip()
     chat_id = update.effective_chat.id
 
     if not text:
         return
 
+    entry = {"chat_id": chat_id, "raw": text}
+
     try:
-        amount = float(text)
-        if amount < 0:
-            await update.message.reply_text("Please enter a positive amount.")
-            return
-        if not amount.is_integer():
-            await update.message.reply_text("Please enter a whole number (no paise).")
-            return
-        amount = int(amount)
+        if text.startswith('+'):
+            entry["type"] = "income"
+            entry["amount"] = float(text[1:])
+        else:
+            entry["type"] = "expense"
+            entry["amount"] = float(text)
     except ValueError:
         await update.message.reply_text("Invalid amount format.")
         return
 
-    entry = {"chat_id": chat_id, "amount": amount}
     context.user_data["pending_entry"] = entry
 
     keyboard = [
-        [InlineKeyboardButton("Income", callback_data="type:income"),
-         InlineKeyboardButton("Expense", callback_data="type:expense")]
+        [InlineKeyboardButton("Cash", callback_data="mode:Cash"),
+         InlineKeyboardButton("Online", callback_data="mode:Online")]
     ]
-    await update.message.reply_text("Is this an income or expense?", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("Select mode of payment:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     entry = context.user_data.get("pending_entry", {})
-
-    if data.startswith("type:"):
-        entry["type"] = data.split(":", 1)[1]
-        keyboard = [
-            [InlineKeyboardButton("Cash", callback_data="mode:Cash"),
-             InlineKeyboardButton("Online", callback_data="mode:Online")]
-        ]
-        await query.edit_message_text("Select mode of payment:", reply_markup=InlineKeyboardMarkup(keyboard))
-        return
 
     if data.startswith("mode:"):
         entry["mode"] = data.split(":", 1)[1]
@@ -70,16 +61,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("O", callback_data="acct:O")]
         ]
         await query.edit_message_text("Select account:", reply_markup=InlineKeyboardMarkup(keyboard))
-        return
 
-    if data.startswith("acct:"):
+    elif data.startswith("acct:"):
         entry["account"] = data.split(":", 1)[1]
         now = datetime.now()
-        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")
+        entry["timestamp"] = now.strftime("%a %d/%m %H:%M")  # Day + Date
         await query.edit_message_text("Enter a short note for this entry (or type '-' to skip):")
         return ENTER_NOTE
 
-    if data.startswith("filter_acct:"):
+    elif data.startswith("filter_acct:"):
         account = data.split(":")[1]
         entries = context.user_data.get("entries", [])
         filtered = [e for e in entries if e["account"] == account]
@@ -91,8 +81,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines = [format_entry(i + 1, e) for i, e in enumerate(filtered)]
         total_income = sum(e["amount"] for e in filtered if e["type"] == "income")
         total_expense = sum(e["amount"] for e in filtered if e["type"] == "expense")
-        lines.append(f'\nTotal Income: {total_income}₹')
-        lines.append(f'Total Expense: {total_expense}₹')
+        lines.append(f'\nTotal Income: ₹{total_income:.2f}')
+        lines.append(f'Total Expense: ₹{total_expense:.2f}')
         await query.edit_message_text("\n".join(lines))
 
 async def handle_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,8 +110,8 @@ async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [format_entry(i + 1, e) for i, e in enumerate(today_entries)]
     total_income = sum(e["amount"] for e in today_entries if e["type"] == "income")
     total_expense = sum(e["amount"] for e in today_entries if e["type"] == "expense")
-    lines.append(f'\nTotal Income: {total_income}₹')
-    lines.append(f'Total Expense: {total_expense}₹')
+    lines.append(f'\nTotal Income: ₹{total_income:.2f}')
+    lines.append(f'Total Expense: ₹{total_expense:.2f}')
     await update.message.reply_text("\n".join(lines))
 
 async def export_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -131,18 +121,9 @@ async def export_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["type", "amount_rupees", "mode", "account", "timestamp", "note"])
+    writer = csv.DictWriter(output, fieldnames=["type", "amount", "mode", "account", "timestamp", "note"])
     writer.writeheader()
-    for e in entries:
-        writer.writerow({
-            "type": e["type"],
-            "amount_rupees": e["amount"],
-            "mode": e["mode"],
-            "account": e["account"],
-            "timestamp": e["timestamp"],
-            "note": e.get("note", ""),
-        })
-
+    writer.writerows(entries)
     output.seek(0)
     await update.message.reply_document(document=io.BytesIO(output.read().encode()), filename="expenses.csv")
 
@@ -167,7 +148,9 @@ async def run_bot():
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
-        states={ENTER_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note)]},
+        states={
+            ENTER_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note)]
+        },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
@@ -179,8 +162,28 @@ async def run_bot():
     app.add_handler(CommandHandler("delete", delete))
     app.add_handler(CommandHandler("filter", filter_command))
 
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+
     print("Bot is running. Press Ctrl+C to stop.")
-    await app.run_polling()
+
+    stop_event = asyncio.Event()
+
+    def handle_shutdown():
+        stop_event.set()
+
+    loop = asyncio.get_running_loop()
+    for sig in ('SIGINT', 'SIGTERM'):
+        loop.add_signal_handler(getattr(signal, sig), handle_shutdown)
+
+    try:
+        await stop_event.wait()
+    finally:
+        print("Shutting down...")
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 if __name__ == "__main__":
     try:
